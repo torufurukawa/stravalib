@@ -123,6 +123,10 @@ class ApiV3(object):
         if params is None:
             params = {}
         self.log.info("{method} {url!r} with params {params!r}".format(method=method, url=url, params=params))
+        for k in params.keys():
+            if not params[k]:
+                del params[k]
+        self.log.info("cleanup: {method} {url!r} with params {params!r}".format(method=method, url=url, params=params))
         if self.access_token:
             params['access_token'] = self.access_token
         params=urlencode(params)
