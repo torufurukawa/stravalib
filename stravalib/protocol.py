@@ -9,10 +9,16 @@ import urlparse
 import functools
 from urllib import urlencode
 
-import requests
+from google.appengine.api import urlfetch
+import json
 
 from stravalib import exc
 
+class HTTPError(RuntimeError):
+    pass
+
+class NotAllowedForGAEStravaLib(ValueError):
+    pass
 
 class ApiV3(object):
     """
@@ -34,9 +40,7 @@ class ApiV3(object):
         self.log = logging.getLogger('{0.__module__}.{0.__name__}'.format(self.__class__))
         self.access_token = access_token
         if requests_session:
-            self.rsession = requests_session
-        else:
-            self.rsession = requests.Session()
+            raise NotAllowedForGAEStravaLib()
 
         if rate_limiter is None:
             # Make it a dummy function, so we don't have to check if it's defined before
@@ -116,23 +120,32 @@ class ApiV3(object):
     def _request(self, url, params=None, files=None, method='GET', check_for_errors=True):
 
         url = self._resolve_url(url)
-        self.log.info("{method} {url!r} with params {params!r}".format(method=method, url=url, params=params))
         if params is None:
             params = {}
+        self.log.info("{method} {url!r} with params {params!r}".format(method=method, url=url, params=params))
         if self.access_token:
             params['access_token'] = self.access_token
+        params=urlencode(params)
 
-        methods = {'GET': self.rsession.get,
-                   'POST': functools.partial(self.rsession.post, files=files),
-                   'PUT': self.rsession.put,
-                   'DELETE': self.rsession.delete}
+        if files:
+            raise NotImplementedError("urlfetch files upload not implemented")
+
+        methods = {'GET': functools.partial(urlfetch.fetch, method=urlfetch.GET, validate_certificate=True),
+                   'POST': functools.partial(urlfetch.fetch, method=urlfetch.POST, validate_certificate=True),
+                   'PUT': functools.partial(urlfetch.fetch, method=urlfetch.PUT, validate_certificate=True),
+                   'DELETE': functools.partial(urlfetch.fetch, method=urlfetch.DELETE, validate_certificate=True),
+                   }
+
+        if method.upper() == 'GET':
+            url += "?" + params
+            params = None
 
         try:
             requester = methods[method.upper()]
         except KeyError:
             raise ValueError("Invalid/unsupported request method specified: {0}".format(method))
 
-        raw = requester(url, params=params)
+        raw = requester(url=url, payload=params)
         if check_for_errors:
             self._handle_protocol_error(raw)
 
@@ -140,7 +153,7 @@ class ApiV3(object):
         if raw.status_code in [204]:
             resp = []
         else:
-            resp = raw.json()
+            resp = json.loads(raw.content)
 
         # TODO: We should parse the response to get the rate limit details and
         # update our rate limiter.
@@ -163,7 +176,7 @@ class ApiV3(object):
         """
         error_str = None
         try:
-            json_response = response.json()
+            json_response = json.loads(response.content)
         except ValueError:
             pass
         else:
@@ -172,9 +185,9 @@ class ApiV3(object):
 
         x = None
         if 400 <= response.status_code < 500:
-            x = requests.exceptions.HTTPError('%s Client Error: %s [%s]' % (response.status_code, response.reason, error_str))
+            x = HTTPError('%s Client Error: %s [%s]' % (response.status_code, response.content, error_str))
         elif 500 <= response.status_code < 600:
-            x = requests.exceptions.HTTPError('%s Server Error: %s [%s]' % (response.status_code, response.reason, error_str))
+            x = HTTPError('%s Server Error: %s [%s]' % (response.status_code, response.content, error_str))
         elif error_str:
             x = exc.Fault(error_str)
 
