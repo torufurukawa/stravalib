@@ -124,7 +124,7 @@ class ApiV3(object):
             params = {}
         self.log.info("{method} {url!r} with params {params!r}".format(method=method, url=url, params=params))
         for k in params.keys():
-            if not params[k]:
+            if params[k] is None:
                 del params[k]
         self.log.info("cleanup: {method} {url!r} with params {params!r}".format(method=method, url=url, params=params))
         if self.access_token:
@@ -135,8 +135,8 @@ class ApiV3(object):
             raise NotImplementedError("urlfetch files upload not implemented")
 
         methods = {'GET': functools.partial(urlfetch.fetch, method=urlfetch.GET, validate_certificate=True),
-                   'POST': functools.partial(urlfetch.fetch, method=urlfetch.POST, validate_certificate=True),
-                   'PUT': functools.partial(urlfetch.fetch, method=urlfetch.PUT, validate_certificate=True),
+                   'POST': functools.partial(urlfetch.fetch, method=urlfetch.POST, validate_certificate=True, headers={'Content-Type':'application/x-www-form-urlencoded'}),
+                   'PUT': functools.partial(urlfetch.fetch, method=urlfetch.PUT, validate_certificate=True, headers={'Content-Type':'application/x-www-form-urlencoded'}),
                    'DELETE': functools.partial(urlfetch.fetch, method=urlfetch.DELETE, validate_certificate=True),
                    }
 
