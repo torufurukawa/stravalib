@@ -584,6 +584,8 @@ class Activity(LoadableEntity):
     WINDSURF = "Windsurf"
     WORKOUT = "Workout"
     YOGA = "Yoga"
+    EBIKERIDE = "EBikeRide"
+    VIRTUALRIDE = "VirtualRide"
 
     _comments = None
     _zones = None
@@ -597,7 +599,8 @@ class Activity(LoadableEntity):
              CROSSCOUNTRYSKIING, CROSSFIT, ELLIPTICAL, HIKE, ICESKATE,
              INLINESKATE, KAYAKING, KITESURF, NORDICSKI, ROCKCLIMBING,
              ROLLERSKI, ROWING, SNOWBOARD, SNOWSHOE, STAIRSTEPPER,
-             STANDUPPADDLING, SURFING, WEIGHTTRAINING, WINDSURF, WORKOUT, YOGA)
+             STANDUPPADDLING, SURFING, WEIGHTTRAINING, WINDSURF, WORKOUT, YOGA,
+             VIRTUALRIDE, EBIKERIDE)
 
     guid = Attribute(unicode, (SUMMARY, DETAILED))  #: (undocumented)
 
